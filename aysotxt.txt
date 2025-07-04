@@ -1,0 +1,116 @@
+whoami
+groups
+sudo ls -l /root
+
+git clone https://github.com/upszot/UTN-FRA_SO_Examenes.git
+./UTN-FRA_SO_Examenes/202406/script_Precondicion.sh
+source ~/.bashrc
+mkdir ~/RTA_Examen_$(date +%Y%m%d)
+
+sudo apt-get update
+sudo apt-get install ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo docker run hello-world
+
+sudo apt update
+sudo apt install wget gpg
+UBUNTU_CODENAME=jammy
+wget -O- "https://keyserver.ubuntu.com/pks/lookup?fingerprint=on&op=get&search=0x6125E2A8C77F2818FB7BD15B93C4A3FD7BB9C367" | sudo gpg --dearmour -o /usr/share/keyrings/ansible-archive-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/ansible-archive-keyring.gpg] http://ppa.launchpad.net/ansible/ansible/ubuntu $UBUNTU_CODENAME main" | sudo tee /etc/apt/sources.list.d/ansible.list
+sudo apt update && sudo apt install ansible
+ansible --version
+
+sudo fdisk -l
+sudo growpart /dev/sda 1
+sudo resize2fs /dev/sda1
+df -h /
+sudo fdisk -l
+
+sudo fdisk /dev/sda
+# (Interactuar aquí: n, p, 2, Enter, +1.7G, n, p, 3, Enter, +512M, t, 2, 8e, t, 3, 82, p, w)
+
+sudo pvcreate /dev/sda2
+sudo pvs
+
+sudo vgcreate vg_datos /dev/sda2
+sudo vgs
+
+sudo lvcreate -L 5M vg_datos -n lv_docker
+sudo lvcreate -L 1.5G vg_datos -n lv_workareas
+sudo lvs
+
+sudo lvextend -L +5G /dev/mapper/vg_datos-lv_docker
+sudo resize2fs /dev/mapper/vg_datos-lv_docker
+df -h /var/lib/docker/
+
+sudo mkswap /dev/sda3
+sudo swapon /dev/sda3
+free -h
+sudo swapon -s
+
+sudo mkfs.ext4 /dev/mapper/vg_datos-lv_docker
+sudo mkfs.ext4 /dev/mapper/vg_datos-lv_workareas
+sudo lsblk -f
+
+sudo mkdir -p /var/lib/docker/
+sudo mkdir -p /work/
+sudo mount /dev/mapper/vg_datos-lv_docker /var/lib/docker/
+sudo mount /dev/mapper/vg_datos-lv_workareas /work/
+df -h
+
+sudo blkid
+echo "" | sudo tee -a /etc/fstab
+echo "# Montajes LVM para el TP" | sudo tee -a /etc/fstab
+echo "UUID=c1463692-f55b-4ef7-9714-75f7bcc000ba /var/lib/docker ext4 defaults 0 2" | sudo tee -a /etc/fstab
+echo "UUID=a547e7b7-4c0e-4840-b52a-a19ef5c5ff50 /work ext4 defaults 0 2" | sudo tee -a /etc/fstab
+echo "UUID=5cc5df35-5ab7-40fa-9f24-04166b394a4a none swap sw 0 0" | sudo tee -a /etc/fstab
+cat /etc/fstab
+sudo mount -a
+df -h
+sudo systemctl restart docker
+sudo systemctl status docker
+
+cd ~/UTN-FRA_SO_Examenes/202406/bash_script/
+ls -l
+cat Lista_Usuarios.txt
+sudo vim /usr/local/bin/YañezAltaUser-Groups.sh
+# DENTRO DE VIM/NANO, PEGAR CONTENIDO DEL SCRIPT COMPLETO (con IFS=',')
+sudo chmod +x /usr/local/bin/YañezAltaUser-Groups.sh
+sudo cp /usr/local/bin/YañezAltaUser-Groups.sh ~/RTA_Examen_20250704/
+/usr/local/bin/YañezAltaUser-Groups.sh pedro ~/UTN-FRA_SO_Examenes/202406/bash_script/Lista_Usuarios.txt
+cat /etc/passwd | grep -E '2P_202406_Prog1|2P_202406_Prog2|2P_202406_Test1|2P_202406_Supervisor'
+cat /etc/group | grep -E '2P_GDesa|2P_GTest|2PSupervisores'
+
+cd ~
+ls -l UTN-FRA_SO_Docker/
+sudo cp -r UTN-FRA_SO_Docker/ejemplo2/* ~/UTN-FRA_SO_Examenes/202406/docker/
+cd ~/UTN-FRA_SO_Examenes/202406/docker/
+ls -l
+cat static-html-directory/index.html
+sudo vim static-html-directory/index.html
+# DENTRO DE VIM/NANO, PEGAR CONTENIDO HTML (Bienvenido a mi Web... Division: 117)
+cat static-html-directory/index.html
+sudo usermod -aG docker pedro
+sudo su - pedro
+cd ~/UTN-FRA_SO_Examenes/202406/docker/
+docker build -t pedroynz/web1-yanez:latest .
+docker image list
+docker login
+docker push pedroynz/web1-yanez:latest
+docker run -d -p 8080:80 pedroynz/web1-yanez:latest
+docker ps
+curl localhost:8080
+echo '#!/bin/bash' | sudo tee run.sh > /dev/null
+echo 'docker run -d -p 8080:80 pedroynz/web1-yanez:latest' | sudo tee -a run.sh > /dev/null
+sudo chmod +x run.sh
+cat run.sh
+
+cd ~/UTN-FRA_SO_Examenes/202406/ansible/
+ls -l
+ls -l roles/
+ansible-galaxy role init tp_final_ansible_pedro
